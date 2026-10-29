@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mapa hasičských jednotiek Slovenska</title>
+  <meta name="description" content="Stanice HaZZ, dobrovoľné hasičské zbory obcí (DHZO) a ďalšie hasičské útvary na Slovensku. Pomôžte doplniť chýbajúce polohy zbrojníc.">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="panel" id="panel" aria-label="Ovládanie mapy">
+      <header class="panel-head">
+        <h1>Hasičské jednotky na&nbsp;Slovensku</h1>
+        <p class="lede">Stanice HaZZ, dobrovoľné hasičské zbory obcí podľa kategorizácie 2026 a ďalšie útvary. Údaje pochádzajú z verejných zdrojov a môžu obsahovať chyby.</p>
+        <button class="sheet-toggle" id="sheetToggle" type="button" aria-expanded="true" aria-controls="panelBody">Skryť panel</button>
+      </header>
+
+      <div class="panel-body" id="panelBody">
+        <section class="help-box" aria-labelledby="helpTitle">
+          <h2 id="helpTitle">Pomôžte spresniť mapu</h2>
+          <p><b id="missingCount">–</b> zbrojníc nemá známu polohu – na mape sú len v strede obce (prázdny krúžok). Poznáte niektorú? Kliknite na ňu a navrhnite opravu.</p>
+          <div class="btn-row">
+            <button type="button" class="btn small" id="showMissing">Ukázať chýbajúce</button>
+            <button type="button" class="btn small" id="addUnit">Nahlásiť chýbajúcu jednotku</button>
+          </div>
+        </section>
+
+        <div class="search">
+          <label for="search" class="field-label">Nájsť jednotku alebo obec</label>
+          <input id="search" type="search" autocomplete="off" placeholder="napr. Šamorín, Kúty, DHZO Báb" aria-controls="results">
+          <ul id="results" class="results" role="listbox" hidden></ul>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="region" class="field-label">Kraj</label>
+            <select id="region"><option value="">Celé Slovensko</option></select>
+          </div>
+          <div class="field">
+            <label for="status" class="field-label">Stav údajov</label>
+            <select id="status">
+              <option value="">všetky jednotky</option>
+              <option value="poloha">chýba poloha zbrojnice</option>
+              <option value="overenie">poloha z OSM, neoverená</option>
+            </select>
+          </div>
+        </div>
+
+        <fieldset class="layers">
+          <legend class="field-label">Vrstvy</legend>
+          <div id="layerList"></div>
+        </fieldset>
+
+        <div class="key">
+          <span class="key-item"><span class="dot dot-solid" aria-hidden="true"></span>poloha budovy</span>
+          <span class="key-item"><span class="dot dot-ring" aria-hidden="true"></span>iba stred obce</span>
+        </div>
+
+        <footer class="panel-foot">
+          <p class="disclaimer"><b>Nejde o oficiálny zoznam HaZZ ani DPO SR.</b> Údaje sú prevzaté z verejne dostupných zdrojov a internetu, nie sú úradne overené a môžu byť neúplné. V núdzi volajte <b>150</b> alebo <b>112</b>.</p>
+          <p><a href="o-mape.html">O mape, zdroje, licencie a ochrana údajov</a> · <a href="data/jednotky.csv" download>CSV</a> · <a href="data/jednotky.geojson" download>GeoJSON</a></p>
+          <p class="small muted" id="dataVersion"></p>
+        </footer>
+      </div>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map" aria-label="Mapa hasičských jednotiek"></div>
+      <div class="notice" id="notice" role="status" hidden></div>
+      <div class="pick-hint" id="pickHint" role="status" hidden></div>
+      <article class="detail" id="detail" hidden aria-live="polite">
+        <button type="button" class="detail-close" id="detailClose" aria-label="Zavrieť">×</button>
+        <div id="detailBody"></div>
+      </article>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="vendor/maplibre-gl.js"></script>
+  <script src="data/units.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
