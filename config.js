@@ -8,7 +8,7 @@ window.SITE_CONFIG = {
   //
   // Automatický prepínač: hlavná je služba z formProvider; ak odmietne návrh (napr. vyčerpaný mesačný limit
   // alebo výpadok), mapa skúsi druhú službu, ak má vyplnený kľúč/alias. Stačí teda vyplniť obe.
-  formProvider: "web3forms",
+  formProvider: "formsubmit",
   web3formsKey: "ddc7a5b5-94b2-4472-8d13-44395039cad1",
   formsubmitId: "",
   // Prevádzkovateľ stránky (uvádza sa v časti Ochrana údajov)
