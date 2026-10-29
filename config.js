@@ -5,6 +5,9 @@ window.SITE_CONFIG = {
   // Služba, ktorá doručí návrhy z formulára na váš e-mail (bez vlastného servera):
   //   "web3forms"  – kľúč získate na https://web3forms.com (zadáte e-mail, kľúč príde e-mailom; kľúč môže byť verejný)
   //   "formsubmit" – https://formsubmit.co; po prvom odoslaní potvrďte e-mail a sem zadajte náhodný alias, ktorý dostanete
+  //
+  // Automatický prepínač: hlavná je služba z formProvider; ak odmietne návrh (napr. vyčerpaný mesačný limit
+  // alebo výpadok), mapa skúsi druhú službu, ak má vyplnený kľúč/alias. Stačí teda vyplniť obe.
   formProvider: "web3forms",
   web3formsKey: "ddc7a5b5-94b2-4472-8d13-44395039cad1",
   formsubmitId: "",

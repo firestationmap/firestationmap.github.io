@@ -347,9 +347,20 @@
   });
 
   // ---- odoslanie návrhu cez formulárovú službu (Web3Forms / FormSubmit) ----
-  const formReady = () => (CFG.formProvider === "formsubmit" ? Boolean(CFG.formsubmitId) : Boolean(CFG.web3formsKey));
-  async function sendForm({ subject, body, replyTo, honey }) {
-    if (CFG.formProvider === "formsubmit") {
+  // Poskytovatelia v poradí: hlavný (CFG.formProvider), potom záložný, ak je nastavený.
+  const PROVIDERS = {
+    web3forms: { label: "Web3Forms", ready: () => Boolean(CFG.web3formsKey) },
+    formsubmit: { label: "FormSubmit", ready: () => Boolean(CFG.formsubmitId) },
+  };
+  const providerChain = () => {
+    const main = CFG.formProvider === "formsubmit" ? "formsubmit" : "web3forms";
+    const other = main === "formsubmit" ? "web3forms" : "formsubmit";
+    return [main, other].filter((k) => PROVIDERS[k].ready());
+  };
+  const formReady = () => providerChain().length > 0;
+
+  async function sendVia(provider, { subject, body, replyTo, honey }) {
+    if (provider === "formsubmit") {
       const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(CFG.formsubmitId)}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ _subject: subject, _template: "box", _captcha: "false", _honey: honey, ...(replyTo ? { email: replyTo } : {}), sprava: body }),
@@ -364,6 +375,15 @@
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok || !j.success) throw new Error(j.message || `HTTP ${res.status}`);
+  }
+
+  /** Skúsi hlavného poskytovateľa; ak zlyhá (limit, výpadok), automaticky záložného. */
+  async function sendForm(msg) {
+    let lastErr = new Error("Odosielanie nie je nastavené.");
+    for (const provider of providerChain()) {
+      try { await sendVia(provider, msg); return; } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
   }
   const PROBLEMS = [
     ["poloha", "poloha zbrojnice / stanice"],
@@ -385,6 +405,7 @@
           <input id="rName" type="text" required placeholder="napr. DHZ Horná Ves">
           <label class="lbl" for="rMuni">Obec</label>
           <input id="rMuni" type="text" placeholder="obec / časť obce">` : `
+          ${p.prec === "exact-unverified" ? `<label class="check confirm"><input type="checkbox" name="problem" value="potvrdenie" id="rConfirm"><span><b>Poloha je správna.</b> Overil(a) som, že bod na mape leží na zbrojnici / stanici tejto jednotky.</span></label>` : ""}
           <fieldset><legend class="lbl">Čo je nesprávne alebo chýba</legend>
             ${PROBLEMS.map(([k, v]) => `<label class="check"><input type="checkbox" name="problem" value="${k}" ${k === "poloha" && p.need.includes("poloha") ? "checked" : ""}>${esc(v)}</label>`).join("")}
           </fieldset>`}
@@ -402,7 +423,7 @@
         <label class="lbl" for="rMail">Váš e-mail <span class="muted">(nepovinné – iba ak vám môžem napísať doplňujúcu otázku)</span></label>
         <input id="rMail" type="email" autocomplete="email" maxlength="120" placeholder="meno@example.sk">
         <div class="hp" aria-hidden="true"><label>Nevypĺňať <input id="rHoney" type="text" tabindex="-1" autocomplete="off"></label></div>
-        <p class="small muted">Návrh pred zapracovaním skontrolujem. Údaje z návrhu (nie váš e-mail) môžu byť zverejnené v mape pod licenciou ODbL. Návrh doručí služba ${CFG.formProvider === "formsubmit" ? "FormSubmit" : "Web3Forms"}. <a href="o-mape.html#sukromie" target="_blank">Ochrana údajov</a></p>
+        <p class="small muted">Návrh pred zapracovaním skontrolujem. Údaje z návrhu (nie váš e-mail) môžu byť zverejnené v mape pod licenciou ODbL. Návrh doručí služba ${providerChain().map((k) => PROVIDERS[k].label).join(" alebo ") || "Web3Forms"}. <a href="o-mape.html#sukromie" target="_blank">Ochrana údajov</a></p>
         <div class="btn-row">
           <button type="submit" class="btn primary" id="rSend">Odoslať návrh</button>
           <button type="button" class="btn" id="rCancel">Zrušiť</button>
@@ -447,6 +468,7 @@
     document.getElementById("rPick").addEventListener("click", () => {
       const start = isNew ? null : { lng: unit.geometry.coordinates[0], lat: unit.geometry.coordinates[1] };
       if (!isNew && !document.querySelector('input[value="poloha"]').checked) document.querySelector('input[value="poloha"]').checked = true;
+      if (document.getElementById("rConfirm")) document.getElementById("rConfirm").checked = false;
       startPick(start, pickHintText, setPos);
       if (start) map.flyTo({ center: start, zoom: Math.max(map.getZoom(), 15), duration: reduceMotion ? 0 : 700 });
     });
@@ -454,6 +476,12 @@
     // pri novej jednotke na mobile najprv formulár, polohu vyberie tlačidlom
     if (isNew && narrow()) finishPick();
 
+    const conf = document.getElementById("rConfirm");
+    if (conf) {
+      const polo = document.querySelector('input[name="problem"][value="poloha"]');
+      conf.addEventListener("change", () => { if (conf.checked) polo.checked = false; });
+      polo.addEventListener("change", () => { if (polo.checked) conf.checked = false; });
+    }
     const form = document.getElementById("reportForm");
     const fallback = document.getElementById("rFallback");
     const validate = () => {

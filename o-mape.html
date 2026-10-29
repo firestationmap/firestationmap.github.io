@@ -73,10 +73,17 @@
     (function () {
       var c = window.SITE_CONFIG || {}, e = c.contactEmail || {};
       var prov = document.getElementById("provider");
-      var pa = document.createElement("a");
-      if (c.formProvider === "formsubmit") { pa.href = "https://formsubmit.co/"; pa.textContent = "FormSubmit (formsubmit.co)"; }
-      else { pa.href = "https://web3forms.com/privacy"; pa.textContent = "Web3Forms (web3forms.com)"; }
-      prov.appendChild(pa);
+      var P = {
+        web3forms: ["https://web3forms.com/privacy", "Web3Forms (web3forms.com)", !!c.web3formsKey],
+        formsubmit: ["https://formsubmit.co/", "FormSubmit (formsubmit.co)", !!c.formsubmitId]
+      };
+      var main = c.formProvider === "formsubmit" ? "formsubmit" : "web3forms";
+      var order = [main, main === "formsubmit" ? "web3forms" : "formsubmit"].filter(function (k) { return P[k][2]; });
+      if (!order.length) order = [main];
+      order.forEach(function (k, i) {
+        if (i) prov.appendChild(document.createTextNode(" alebo záložne "));
+        var pa = document.createElement("a"); pa.href = P[k][0]; pa.textContent = P[k][1]; prov.appendChild(pa);
+      });
       var mail = e.user && e.domain ? e.user + "@" + e.domain : "";
       document.getElementById("operator").textContent = c.operator || "";
       document.getElementById("retention").textContent = c.retention || "";
