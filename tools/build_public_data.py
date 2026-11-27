@@ -37,7 +37,7 @@ OTHER_KIND = [
 INTERNAL = re.compile(r"KOREKCIA|otvorené:|overiť|x=\d|používateľ|Raab|\[.*→", re.I)
 
 
-def public_notes(notes: str, manual: bool, prec: str) -> str:
+def public_notes(notes: str, manual: bool, prec: str, by_report: bool = False) -> str:
     parts = [p.strip() for p in (notes or "").split("|") if p.strip()]
     keep = []
     for p in parts:
@@ -49,7 +49,9 @@ def public_notes(notes: str, manual: bool, prec: str) -> str:
             continue
         p = p.replace("NIE poloha", "nie poloha")
         keep.append(p)
-    if manual:
+    if by_report:
+        keep.append("údaj doplnený podľa pripomienky návštevníka")
+    elif manual:
         keep.append("údaj opravený správcom mapy")
     return "; ".join(dict.fromkeys(keep))
 
@@ -59,6 +61,8 @@ def public_sources(recs: str, prec: str) -> list[str]:
     for s in [x for x in (recs or "").split(";") if x]:
         if (s.startswith("osm-place:") or s == "nominatim:municipality") and prec not in APPROX:
             continue  # stred obce už nie je zdrojom polohy
+        if s.startswith("web:"):
+            continue  # web zboru sa zobrazuje samostatne (vlastnosť "web")
         if s.startswith("manual:"):
             m = re.search(r"\(zdroj: ([^)]+)\)", s)
             d = re.search(r"\d{4}-\d{2}-\d{2}", s)
@@ -100,6 +104,8 @@ for fname in ["hazz_stations.csv", "dhzo_stations_2026.csv", "other_units_osm.cs
             layer, kind = "dhz", "Dobrovoľný hasičský zbor (nie obecný)"
         flags = [f for f in r["dataQualityFlags"].split(";") if f]
         manual = any(f.startswith("USER_") for f in flags) or "manual:" in r["sourceRecords"]
+        by_report = "report:" in r["sourceRecords"] and "manual:" not in r["sourceRecords"]
+        web = next((x[4:] for x in r["sourceRecords"].split(";") if x.startswith("web:http")), "")
         flags = ["CORRECTED_BY_MAINTAINER" if f.startswith("USER_") else f for f in flags]
         if r["locationPrecision"] not in APPROX:
             flags = [f for f in flags if f != "LOCATION_IS_MUNICIPALITY_CENTROID"]
@@ -114,9 +120,10 @@ for fname in ["hazz_stations.csv", "dhzo_stations_2026.csv", "other_units_osm.cs
                 "approx": r["locationPrecision"] in APPROX,
                 "need": need(r["locationPrecision"], r["address"]),
                 "flags": list(dict.fromkeys(flags)),
-                "notes": public_notes(r["notes"], manual, r["locationPrecision"]),
+                "notes": public_notes(r["notes"], manual, r["locationPrecision"], by_report),
                 "sources": public_sources(r["sourceRecords"], r["locationPrecision"]),
                 "url": r["sourceUrl"],
+                "web": web,
             },
         })
 
@@ -139,7 +146,7 @@ fc = {"type": "FeatureCollection", "metadata": meta, "features": features}
 (OUT / "data" / "units.js").write_text(
     "/* Vygenerované nástrojom tools/build_public_data.py – needitovať ručne. Licencia dát: ODbL 1.0. */\nwindow.FIRE_DATA = "
     + json.dumps(fc, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
-cols = ["id", "name", "kind", "cat", "municipality", "district", "region", "address", "latitude", "longitude", "prec", "conf", "need", "notes", "sources"]
+cols = ["id", "name", "kind", "cat", "municipality", "district", "region", "address", "latitude", "longitude", "prec", "conf", "need", "notes", "web", "sources"]
 with open(OUT / "data" / "jednotky.csv", "w", encoding="utf-8-sig", newline="") as fh:
     w = csv.writer(fh)
     w.writerow(cols)
@@ -147,7 +154,7 @@ with open(OUT / "data" / "jednotky.csv", "w", encoding="utf-8-sig", newline="") 
         p = f["properties"]
         lon, lat = f["geometry"]["coordinates"]
         w.writerow([p["id"], p["name"], p["kind"], p["cat"], p["municipality"], p["district"], p["region"], p["address"], lat, lon,
-                    p["prec"], p["conf"], ";".join(p["need"]), p["notes"], ";".join(p["sources"])])
+                    p["prec"], p["conf"], ";".join(p["need"]), p["notes"], p["web"], ";".join(p["sources"])])
 
 print("bodov:", len(features), dict(Counter(f["properties"]["layer"] for f in features)))
 print("vynechané:", dict(skipped))
