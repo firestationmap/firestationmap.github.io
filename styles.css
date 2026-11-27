@@ -229,6 +229,8 @@ input[type="search"], select {
   }
   .panel-body { padding: 12px 16px 20px; }
   .detail { left: 8px; right: 8px; width: auto; top: 8px; max-height: 62%; }
+  /* formulár na mobile: celá obrazovka, aby bolo vidno všetky polia */
+  .detail.form { position: fixed; inset: 0; left: 0; right: 0; top: 0; max-height: none; border-radius: 0; border: 0; z-index: 20; padding: 18px 16px 24px; }
   .field-row { grid-template-columns: 1fr; }
 
 }

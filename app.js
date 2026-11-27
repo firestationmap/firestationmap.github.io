@@ -202,6 +202,13 @@
   const detail = document.getElementById("detail");
   const detailBody = document.getElementById("detailBody");
 
+  /** Odkaz na web alebo Facebook zboru – iba http(s). */
+  function webLink(u) {
+    if (!/^https?:\/\//i.test(u || "")) return esc(u || "");
+    let label = u;
+    try { const x = new URL(u); label = x.hostname.replace(/^www\./, "") + (x.pathname.length > 1 ? x.pathname : ""); } catch (e) { /* ponechať celý odkaz */ }
+    return `<a href="${esc(u)}" target="_blank" rel="noopener nofollow">${esc(label)}</a>`;
+  }
   function sourceLink(s) {
     if (s.startsWith("osm:")) {
       const id = s.slice(4); const t = { n: "node", w: "way", r: "relation" }[id[0]];
@@ -216,7 +223,8 @@
     }
     if (s.startsWith("nominatim")) return "Geokódovanie adresy (Nominatim / OpenStreetMap)";
     if (s.startsWith("manual:")) return "Oprava správcu mapy " + esc(s.slice(7));
-    if (s.startsWith("report:")) return "Pripomienka návštevníka (schválená)";
+    if (s.startsWith("report:")) return "Pripomienka návštevníka (schválená) " + esc(s.slice(7));
+    if (s.startsWith("web:")) return webLink(s.slice(4));
     return esc(s);
   }
 
@@ -236,6 +244,7 @@
     const flags = (p.flags || []).map((x) => FLAG[x] || x);
     const needs = p.need.filter((n) => n !== "adresa" || p.layer === "hazz");
 
+    detail.classList.remove("form");
     detailBody.innerHTML = `
       <div class="d-kind"><span class="swatch ${p.layer === "hazz" ? "hazz" : ""}" style="background:${l.color}"></span>${esc(p.kind)}</div>
       <h2 class="d-name">${esc(p.name)}</h2>
@@ -245,6 +254,7 @@
         ${p.municipality ? `<dt>Obec</dt><dd>${esc(p.municipality)}</dd>` : ""}
         ${p.district ? `<dt>Okres</dt><dd>${esc(p.district)}</dd>` : ""}
         ${p.region ? `<dt>Kraj</dt><dd>${esc(p.region)}</dd>` : ""}
+        ${p.web ? `<dt>Web zboru</dt><dd>${webLink(p.web)}</dd>` : ""}
         <dt>Adresa</dt><dd>${p.address ? esc(p.address) : "<span class='d-notes'>neznáma</span>"}</dd>
         <dt>Poloha</dt><dd>${esc(PREC[p.prec] || p.prec)}</dd>
         <dt>Dôvera</dt><dd><span class="conf" aria-hidden="true">${confBars}</span>${esc(CONF_LABEL[p.conf] || p.conf)}</dd>
@@ -286,6 +296,7 @@
   function closeDetail() {
     cancelPick();
     detail.hidden = true;
+    detail.classList.remove("form");
     state.selected = null;
     if (dataAdded) map.setFilter("selected", ["==", ["id"], -1]);
   }
@@ -531,6 +542,8 @@
     const unit = features[fid];
     detailBody.innerHTML = reportForm({ title: `Návrh opravy – ${unit.properties.name}`, unit, isNew: false });
     detail.hidden = false;
+    detail.classList.add("form");
+    detail.scrollTop = 0;
     wireReport({ unit, isNew: false });
   }
   document.getElementById("addUnit").addEventListener("click", () => {
@@ -538,6 +551,8 @@
     state.selected = null;
     detailBody.innerHTML = reportForm({ title: "Nahlásiť chýbajúcu jednotku", unit: null, isNew: true });
     detail.hidden = false;
+    detail.classList.add("form");
+    detail.scrollTop = 0;
     wireReport({ unit: null, isNew: true });
     if (window.innerWidth < 760) document.getElementById("sheetToggle").click();
   });
