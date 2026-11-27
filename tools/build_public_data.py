@@ -159,3 +159,15 @@ with open(OUT / "data" / "jednotky.csv", "w", encoding="utf-8-sig", newline="") 
 print("bodov:", len(features), dict(Counter(f["properties"]["layer"] for f in features)))
 print("vynechané:", dict(skipped))
 print("chýba poloha:", sum("poloha" in f["properties"]["need"] for f in features))
+
+# Verzia v odkazoch na súbory (?v=...), aby prehliadače po aktualizácii nenačítali starú verziu z vyrovnávacej pamäte.
+from datetime import datetime
+stamp = datetime.now().strftime("%Y%m%d%H%M")
+ASSET = re.compile(r'((?:src|href)=")((?:vendor/[^"?]+|data/units\.js|app\.js|styles\.css|config\.js))(\?v=[^"]*)?(")')
+for page in ["index.html", "o-mape.html"]:
+    fp = OUT / page
+    if fp.exists():
+        html = fp.read_text(encoding="utf-8")
+        fp.write_text(ASSET.sub(lambda m: f"{m.group(1)}{m.group(2)}?v={stamp}{m.group(4)}", html), encoding="utf-8")
+print("verzia súborov v HTML:", stamp)
+
